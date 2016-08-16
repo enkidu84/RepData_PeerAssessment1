@@ -1,0 +1,120 @@
+---
+title: "PA1_template"
+author: "Benjamin"
+date: "16 August 2016"
+output: md_document
+clean: FALSE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+solution for week 2 assignment reproducible research
+based on:
+Dataset: Activity monitoring data [52K]
+The variables included in this dataset are:
+
+steps: Number of steps taking in a 5-minute interval (missing values are coded as NA)
+date: The date on which the measurement was taken in YYYY-MM-DD format
+interval: Identifier for the 5-minute interval in which measurement was taken
+The dataset is stored in a comma-separated-value (CSV) file and there are a total o
+
+getting started
+```{r}
+
+library(ggplot2)
+
+```
+Read and Format the Data
+```{r}
+
+activity=read.csv(file="activity.csv")
+activity$date = as.Date(activity$date, format= "%Y-%m-%d")
+
+```
+
+1. Calculate the total number of steps taken per day - aggregate first NA ignore
+```{r}
+
+Agg = aggregate(activity$steps, by=list(Category=activity$date), FUN=sum)
+qplot(Agg$x, geom="histogram" )+ labs(title="histogram of steps per day",x="steps", y = "Count")
+
+```
+
+calculate median and mean
+
+```{r}
+Agg_mead = aggregate(activity$steps, by=list(Category=activity$date), FUN=median, na.rm=TRUE)
+Agg_mean = aggregate(activity$steps, by=list(Category=activity$date), FUN=mean, na.rm=TRUE)
+
+print(Agg_mead)
+print(Agg_mean)
+```
+
+What is the average daily activity pattern? 
+
+Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+as average is not defined, I go with the mean
+
+
+```{r}
+Agg_inter = aggregate(activity$steps, by=list(Category=activity$interval), FUN=mean, na.rm=TRUE)
+
+# and plot
+
+plot(Agg_inter$x ~ Agg_inter$Category, type="l", xlab="interval", ylab="mean number steps")
+```
+
+get the interval with hightest mean number of steps
+
+```{r}
+print(subset(Agg_inter, Agg_inter$x==max(Agg_inter$x) ))
+
+```
+calculate and report the total number of missing values in the dataset 
+(i.e. the total number of rows with NAs)
+
+Devise a strategy for filling in all of the missing values in the dataset. 
+The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, 
+or the mean for that 5-minute interval, etc.
+
+Create a new dataset that is equal to the original dataset but with the missing data filled in.
+Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. 
+Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+total number of missing values 7th value of the standard summary function gives us the NAs
+
+
+```{r}
+summary(activity$steps)[7]
+```
+
+as the interval shows a much clearer influence on the mean numbber of steps compared to the 
+day, I will use the mean per interval to substitute missing
+
+```{r}
+activity_sub1 = merge(activity, Agg_inter, by.x="interval", by.y="Category")
+
+activity_sub1$steps_sub = as.integer(ifelse(is.na(activity_sub1$steps) , activity_sub1$x ,activity_sub1$steps))
+
+# and recode to make it nice and tidy
+activity_sub= data.frame( activity_sub1$steps_sub, activity_sub1$date, activity_sub1$interval)
+ colnames(activity_sub)=colnames(activity)
+ Agg_sub = aggregate(activity_sub$steps, by=list(Category=activity_sub$date), FUN=sum)
+
+ # plot it - gives some warning because of NA but not important
+
+qplot(Agg_sub$x, geom="histogram" )+ labs(title="histogram of steps per day with NAs substituted",x="steps", y = "Count")
+
+Agg_sub_mead = aggregate(activity_sub$steps, by=list(Category=activity_sub$date), FUN=median, na.rm=TRUE)
+Agg_sub_mean = aggregate(activity_sub$steps, by=list(Category=activity_sub$date), FUN=mean, na.rm=TRUE)
+
+print(Agg_sub_mead)
+print(Agg_sub_mean)
+```
+
+# substitution increases frequencies in the hist, so not neutral here for all analysis
